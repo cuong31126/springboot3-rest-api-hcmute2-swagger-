@@ -1,0 +1,314 @@
+================================================================================
+            CHỦ ĐỀ: XÂY DỰNG RESTFUL API CRUD CATEGORY TRÊN SPRING BOOT 3
+                          CHUỖI PROMPT (PROMPT CHAIN) DÀNH CHO AI
+================================================================================
+Mục đích:
+File này định nghĩa chuỗi các câu lệnh (Prompt Chain) theo từng bước (step-by-step)
+để yêu cầu AI sinh mã nguồn chính xác nhất, bám sát tài liệu bài giảng của
+ThS. Nguyễn Hữu Trung (HCMUTE - FIT), đồng thời tương thích hoàn toàn với:
+  - Spring Boot 3.3.4
+  - Java 21
+  - Jakarta Persistence (thay cho javax)
+  - SpringDoc OpenAPI 3 (thay cho Springfox Swagger 2 đã lỗi thời trên SB3)
+  - Microsoft SQL Server
+================================================================================
+
+--------------------------------------------------------------------------------
+BƯỚC 1: KHỞI TẠO CẤU HÌNH LƯU TRỮ VÀ XỬ LÝ FILE (STORAGE SERVICE & EXCEPTIONS)
+--------------------------------------------------------------------------------
+[Mục tiêu]:
+Tạo cấu hình thư mục lưu trữ file upload, các Exception xử lý lỗi file,
+interface IStorageService và cài đặt FileSystemStorageServiceImpl.
+
+[PROMPT COPY ĐỂ GỬI CHO AI]:
+"""
+Bạn là chuyên gia lập trình Java Spring Boot 3. Hãy thực hiện Bước 1 trong dự án:
+
+1. Package: vn.iotstar.exception
+   - Tạo class StorageException kế thừa RuntimeException (serialVersionUID = 1L, có constructor nhận String message và String message, Exception e).
+   - Tạo class StorageFileNotFoundException kế thừa StorageException (serialVersionUID = 1L, có constructor nhận String message).
+
+2. Package: vn.iotstar.config
+   - Tạo class StorageProperties có annotation @ConfigurationProperties("storage") và @Data (Lombok), chứa thuộc tính `private String location;`.
+
+3. Package: vn.iotstar.service
+   - Tạo interface IStorageService gồm các phương thức:
+     + void init();
+     + void delete(String storeFilename) throws Exception;
+     + Path load(String filename);
+     + Resource loadAsResource(String filename);
+     + void store(MultipartFile file, String storeFilename);
+     + String getSorageFilename(MultipartFile file, String id);
+
+4. Package: vn.iotstar.service.impl
+   - Tạo class FileSystemStorageServiceImpl implements IStorageService:
+     + Khai báo @Service, inject StorageProperties thông qua Constructor.
+     + Thuộc tính `private final Path rootLocation;`.
+     + Cài đặt các hàm xử lý đường dẫn tuyệt đối, chuẩn hóa filename bằng Commons-IO (FilenameUtils.getExtension), kiểm tra không cho lưu file ra ngoài thư mục gốc (`rootLocation`), bắt các ngoại lệ và ném StorageException / StorageFileNotFoundException.
+
+Yêu cầu:
+- Sử dụng đúng thư viện `jakarta.*` (nếu có) và Java 21 `java.nio.file.*`.
+- Dùng Commons-IO `org.apache.commons.io.FilenameUtils`.
+- Code đầy đủ, không cắt xén, có comment giải thích rõ ràng.
+"""
+
+--------------------------------------------------------------------------------
+BƯỚC 2: MODEL PHẢN HỒI CHUẨN (RESPONSE MODEL) VÀ CLASS CHẠY CHÍNH (APPLICATION)
+--------------------------------------------------------------------------------
+[Mục tiêu]:
+Tạo model chuẩn định dạng JSON trả về cho mọi API (`Response.java`) và cấu hình
+kích hoạt StorageProperties + khởi tạo thư mục upload lúc khởi động ứng dụng.
+
+[PROMPT COPY ĐỂ GỬI CHO AI]:
+"""
+Bạn là chuyên gia lập trình Java Spring Boot 3. Hãy thực hiện Bước 2:
+
+1. Package: vn.iotstar.model
+   - Tạo class Response (định dạng phản hồi API chuẩn theo tài liệu bài giảng):
+     + Sử dụng Lombok: @Data, @AllArgsConstructor, @NoArgsConstructor.
+     + Các thuộc tính:
+         private Boolean status;
+         private String message;
+         private Object body;
+
+2. Package: vn.iotstar
+   - Tạo hoặc cấu hình class chạy chính `VietApiApplication.java` (hoặc `SpringbootThymeleafApplication.java`):
+     + Gắn annotation: @SpringBootApplication.
+     + Gắn annotation: @EnableConfigurationProperties(StorageProperties.class).
+     + Khai báo hàm `public static void main(String[] args)`.
+     + Khai báo Bean CommandLineRunner init(IStorageService storageService) tự động gọi `storageService.init()` để tạo thư mục uploads khi ứng dụng khởi chạy.
+
+Yêu cầu:
+- Viết mã nguồn hoàn chỉnh, đúng chuẩn cú pháp Spring Boot 3.
+"""
+
+--------------------------------------------------------------------------------
+BƯỚC 3: XÂY DỰNG CÁC ENTITY JPA (CATEGORY & PRODUCT)
+--------------------------------------------------------------------------------
+[Mục tiêu]:
+Xây dựng thực thể ánh xạ CSDL SQL Server gồm Category và Product với mối quan hệ
+1-N (@OneToMany và @ManyToOne), dùng @JsonIgnore để tránh vòng lặp đệ quy vô hạn khi tuần tự hóa JSON.
+
+[PROMPT COPY ĐỂ GỬI CHO AI]:
+"""
+Bạn là chuyên gia Java Spring Boot 3. Hãy thực hiện Bước 3: Tạo các Entity JPA:
+
+1. Package: vn.iotstar.entity
+   - Tạo class Category implements Serializable:
+     + @Data, @AllArgsConstructor, @NoArgsConstructor, @Entity, @Table(name = "Categories").
+     + private static final long serialVersionUID = 1L;
+     + @Id, @GeneratedValue(strategy = GenerationType.IDENTITY)
+       private Long categoryId;
+     + @Column(name = "categoryName", columnDefinition = "nvarchar(200)")
+       private String categoryName;
+     + @Column(name = "icon", length = 500)
+       private String icon;
+     + @JsonIgnore
+       @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
+       private Set<Product> products;
+
+2. Package: vn.iotstar.entity
+   - Tạo class Product implements Serializable:
+     + @Data, @AllArgsConstructor, @NoArgsConstructor, @Entity, @Table(name = "Products").
+     + private static final long serialVersionUID = 1L;
+     + @Id, @GeneratedValue(strategy = GenerationType.IDENTITY)
+       private Long productId;
+     + @Column(length = 500, columnDefinition = "nvarchar(500) not null")
+       private String productName;
+     + @Column(nullable = false)
+       private int quantity;
+     + @Column(nullable = false)
+       private double unitPrice;
+     + @Column(length = 200)
+       private String images;
+     + @Column(columnDefinition = "nvarchar(500) not null")
+       private String description;
+     + @Column(nullable = false)
+       private double discount;
+     + @Temporal(TemporalType.TIMESTAMP)
+       @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+       private Date createDate;
+     + @Column(nullable = false)
+       private short status;
+     + @JsonIgnore
+       @ManyToOne
+       @JoinColumn(name = "categoryId")
+       private Category category;
+
+Yêu cầu:
+- Phải dùng `jakarta.persistence.*` (tuyệt đối không dùng `javax.persistence.*`).
+- Đầy đủ import và đúng chuẩn JPA trong Spring Boot 3.
+"""
+
+--------------------------------------------------------------------------------
+BƯỚC 4: XÂY DỰNG TẦNG REPOSITORY (CATEGORYREPOSITORY & PRODUCTREPOSITORY)
+--------------------------------------------------------------------------------
+[Mục tiêu]:
+Tạo interface Spring Data JPA Repository kế thừa `JpaRepository` với các phương thức
+tìm kiếm theo tên, phân trang `Pageable`.
+
+[PROMPT COPY ĐỂ GỬI CHO AI]:
+"""
+Bạn là chuyên gia Spring Data JPA. Hãy thực hiện Bước 4: Tạo Repository:
+
+1. Package: vn.iotstar.repository
+   - Tạo interface CategoryRepository extends JpaRepository<Category, Long>:
+     + @Repository
+     + List<Category> findByCategoryNameContaining(String name);
+     + Page<Category> findByCategoryNameContaining(String name, Pageable pageable);
+     + Optional<Category> findByCategoryName(String name);
+
+2. Package: vn.iotstar.repository
+   - Tạo interface ProductRepository extends JpaRepository<Product, Long>:
+     + @Repository
+     + List<Product> findByProductNameContaining(String name);
+     + Page<Product> findByProductNameContaining(String name, Pageable pageable);
+     + Optional<Product> findByProductName(String name);
+     + Optional<Product> findByCreateDate(Date createAt);
+
+Yêu cầu:
+- Khai báo đúng các import: `org.springframework.data.jpa.repository.JpaRepository`, `org.springframework.data.domain.Page`, `Pageable`, `java.util.Optional`,...
+"""
+
+--------------------------------------------------------------------------------
+BƯỚC 5: XÂY DỰNG TẦNG SERVICE (ICATEGORYSERVICE & CATEGORYSERVICEIMPL)
+--------------------------------------------------------------------------------
+[Mục tiêu]:
+Tạo interface ICategoryService và class cài đặt CategoryServiceImpl đầy đủ các nghiệp vụ
+CRUD, xử lý giữ nguyên ảnh cũ nếu không upload ảnh mới khi update.
+
+[PROMPT COPY ĐỂ GỬI CHO AI]:
+"""
+Bạn là chuyên gia Spring Boot. Hãy thực hiện Bước 5: Tạo tầng Service:
+
+1. Package: vn.iotstar.service
+   - Tạo interface ICategoryService định nghĩa các phương thức:
+     + void delete(Category entity);
+     + void deleteById(Long id);
+     + long count();
+     + <S extends Category> Optional<S> findOne(Example<S> example);
+     + Optional<Category> findById(Long id);
+     + List<Category> findAllById(Iterable<Long> ids);
+     + List<Category> findAll(Sort sort);
+     + Page<Category> findAll(Pageable pageable);
+     + List<Category> findAll();
+     + Optional<Category> findByCategoryName(String name);
+     + <S extends Category> S save(S entity);
+     + Page<Category> findByCategoryNameContaining(String name, Pageable pageable);
+     + List<Category> findByCategoryNameContaining(String name);
+
+2. Package: vn.iotstar.service.impl
+   - Tạo class CategoryServiceImpl implements ICategoryService:
+     + Đánh dấu @Service.
+     + Inject CategoryRepository qua @Autowired hoặc Constructor.
+     + Trong phương thức `save(S entity)`: kiểm tra nếu entity.getCategoryId() != null thì kiểm tra xem icon mới có rỗng không; nếu rỗng thì giữ nguyên icon cũ từ database.
+     + Cài đặt đầy đủ tất cả các phương thức ủy quyền (delegate) sang CategoryRepository.
+
+Yêu cầu:
+- Dùng `org.springframework.util.StringUtils` kiểm tra chuỗi rỗng (`StringUtils.hasText` hoặc `!StringUtils.hasLength`).
+- Viết đầy đủ code không bỏ sót method nào.
+"""
+
+--------------------------------------------------------------------------------
+BƯỚC 6: XÂY DỰNG RESTFUL CONTROLLER (CATEGORYAPICONTROLLER)
+--------------------------------------------------------------------------------
+[Mục tiêu]:
+Xây dựng Controller RESTful API xử lý các endpoint chuẩn RESTful trả về ResponseEntity<Response>,
+hỗ trợ upload file icon qua MultipartFile bằng UUID ngẫu nhiên.
+
+[PROMPT COPY ĐỂ GỬI CHO AI]:
+"""
+Bạn là chuyên gia Spring Boot RESTful API. Hãy thực hiện Bước 6: Xây dựng Controller:
+
+Package: vn.iotstar.controller.api
+Tạo class CategoryAPIController:
+- Đánh dấu: @RestController, @RequestMapping(path = "/api/category")
+- Inject ICategoryService và IStorageService.
+- Triển khai các API chính xác theo tài liệu bài giảng:
+
+1. GET /api/category
+   - Lấy danh sách toàn bộ Category.
+   - Trả về: ResponseEntity<Response>(new Response(true, "Thành công", list), HttpStatus.OK).
+
+2. POST /api/category/getCategory?id=...
+   - Nhận `@RequestParam("id") Long id`.
+   - Nếu tìm thấy: trả về status 200 kèm Response(true, "Thành công", category).
+   - Nếu không tìm thấy: trả về status 404 NOT_FOUND kèm Response(false, "Thất bại", null).
+
+3. POST /api/category/addCategory
+   - Nhận `@RequestParam("categoryName") String categoryName` và `@RequestParam(value = "icon", required = false) MultipartFile icon`.
+   - Kiểm tra nếu tên danh mục đã tồn tại -> trả về BAD_REQUEST.
+   - Nếu chưa tồn tại: kiểm tra icon có rỗng không; nếu có icon thì sinh UUID, lấy tên file qua `storageService.getSorageFilename(icon, uuString)`, lưu file qua `storageService.store(...)`, gán vào category.setIcon(...).
+   - Lưu category vào DB và trả về 200 OK cùng Response(true, "Thêm Thành công", category).
+
+4. PUT /api/category/updateCategory
+   - Nhận `@RequestParam("categoryId") Long categoryId`, `@RequestParam("categoryName") String categoryName`, `@RequestParam(value = "icon", required = false) MultipartFile icon`.
+   - Nếu không tìm thấy Category -> trả về BAD_REQUEST cùng Response(false, "Không tìm thấy Category", null).
+   - Nếu tìm thấy: nếu có file icon mới thì lưu file mới và cập nhật icon; cập nhật categoryName; gọi service.save(); trả về 200 OK cùng Response(true, "Cập nhật Thành công", category).
+
+5. DELETE /api/category/deleteCategory?categoryId=...
+   - Nhận `@RequestParam("categoryId") Long categoryId`.
+   - Nếu không tìm thấy -> trả về BAD_REQUEST cùng Response(false, "Không tìm thấy Category", null).
+   - Nếu tìm thấy -> gọi `categoryService.delete(...)` và trả về 200 OK cùng Response(true, "Xóa Thành công", optCategory.get()).
+
+Yêu cầu:
+- Tương thích Spring Boot 3.3.4, hỗ trợ file upload dạng Multipart/form-data.
+- Code hoàn chỉnh, bắt lỗi đầy đủ.
+"""
+
+--------------------------------------------------------------------------------
+BƯỚC 7: CẤU HÌNH SWAGGER OPENAPI 3 VÀ API HIỂN THỊ HÌNH ẢNH (SERVE IMAGES)
+--------------------------------------------------------------------------------
+[Mục tiêu]:
+Cấu hình SpringDoc OpenAPI 3 cho Spring Boot 3 (truy cập tại http://localhost:8080/swagger-ui.html)
+và tạo Controller để xem/hiển thị file ảnh upload (`/admin/products/images/{filename:.+}`).
+
+[PROMPT COPY ĐỂ GỬI CHO AI]:
+"""
+Bạn là chuyên gia Spring Boot 3. Hãy thực hiện Bước 7:
+
+1. Package: vn.iotstar.config
+   - Tạo class OpenApiConfig:
+     + Đánh dấu @Configuration.
+     + Khai báo @Bean OpenAPI customOpenAPI() thiết lập Title: "API Documentation - VietApi", Version: "1.0", Description: "RESTful API Spring Boot 3 CRUD Category & Product with File Upload".
+
+2. Package: vn.iotstar.controller
+   - Tạo class ImageController (hoặc ProductController):
+     + Đánh dấu @Controller hoặc @RestController.
+     + Tạo endpoint `@GetMapping("/admin/products/images/{filename:.+}")` hoặc `@GetMapping("/images/{filename:.+}")`:
+       nhận `@PathVariable String filename`, gọi `storageService.loadAsResource(filename)` và trả về `ResponseEntity<Resource>` kèm header `HttpHeaders.CONTENT_DISPOSITION` hoặc MediaType phù hợp để browser có thể render ảnh trực tiếp.
+
+Yêu cầu:
+- Sử dụng thư viện `io.swagger.v3.oas.models.*` của SpringDoc OpenAPI (không dùng Springfox Swagger 2).
+"""
+
+--------------------------------------------------------------------------------
+BƯỚC 8: VIẾT GIAO DIỆN CLIENT AJAX / JQUERY RENDER RESTFUL API
+--------------------------------------------------------------------------------
+[Mục tiêu]:
+Tạo trang web frontend bằng HTML/Thymeleaf sử dụng jQuery AJAX để kiểm thử gọi
+các API trên giao diện trực quan theo trang 55-58 của bài giảng.
+
+[PROMPT COPY ĐỂ GỬI CHO AI]:
+"""
+Bạn là chuyên gia Frontend & Spring Boot. Hãy thực hiện Bước 8:
+
+1. Tạo file: src/main/resources/static/index.html (hoặc templates/index.html):
+   - Nhúng thư viện jQuery 3.7.1 từ CDN: https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js
+   - Thiết kế giao diện hiện đại:
+     + Bảng danh sách Category (ID, Icon hình ảnh hiển thị thật từ API hình ảnh, Tên Category, Thao tác Edit/Delete).
+     + Form thêm mới Category (nhập categoryName, chọn file icon).
+     + Modal/Form cập nhật Category.
+     + Nút tải lại dữ liệu động không cần reload trang.
+   - Viết mã Javascript (hoặc file static/js/category-ajax.js):
+     + Hàm `loadCategories()`: gọi `$.ajax({ type: 'GET', url: '/api/category', ... })` và render thẻ `<tr>` vào bảng.
+     + Hàm xử lý submit Form thêm: dùng `new FormData()`, gọi `$.ajax({ type: 'POST', url: '/api/category/addCategory', processData: false, contentType: false, ... })`.
+     + Hàm xử lý cập nhật: gọi `$.ajax({ type: 'PUT', url: '/api/category/updateCategory', ... })`.
+     + Hàm xử lý xóa: gọi `$.ajax({ type: 'DELETE', url: '/api/category/deleteCategory?categoryId=' + id, ... })`.
+
+Yêu cầu:
+- Giao diện đẹp, chuẩn responsive, xử lý bất đồng bộ mượt mà, thông báo SweetAlert2 hoặc Toast khi thành công/thất bại.
+"""
+================================================================================
+                               HẾT CHUỖI PROMPT
+================================================================================

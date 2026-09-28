@@ -1,0 +1,44 @@
+# ====================================
+# Maven target directory
+# ====================================
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# ====================================
+# Eclipse / Spring Tool Suite (STS)
+# ====================================
+.project
+.classpath
+.settings/
+bin/
+.factorypath
+
+# ====================================
+# IntelliJ IDEA
+# ====================================
+.idea/
+*.iml
+*.iws
+out/
+
+# ====================================
+# VS Code
+# ====================================
+.vscode/
+
+# ====================================
+# Uploaded files
+# ====================================
+uploads/*
+!uploads/.gitkeep
+
+# ====================================
+# OS & System files
+# ====================================
+.DS_Store
+Thumbs.db
+*.log

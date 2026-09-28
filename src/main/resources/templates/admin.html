@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Trị Hệ Thống - GraphQL</title>
+    <!-- Google Font Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
+    <style>
+        :root {
+            --bg-page: #f9fafb;
+            --surface: #ffffff;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --primary: #111827;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .site-header {
+            background-color: var(--surface);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .brand-logo {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
+            text-decoration: none;
+            letter-spacing: -0.3px;
+        }
+
+        .nav-link-custom {
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-decoration: none;
+            padding: 0.5rem 0.85rem;
+            border-radius: 6px;
+            transition: color 0.15s ease;
+        }
+
+        .nav-link-custom:hover, .nav-link-custom.active {
+            color: var(--text-main);
+            background-color: #f3f4f6;
+        }
+
+        /* Segmented Control Tabs */
+        .segmented-tabs {
+            display: inline-flex;
+            background: #f3f4f6;
+            padding: 4px;
+            border-radius: 8px;
+            gap: 2px;
+        }
+
+        .segmented-tabs .tab-btn {
+            border: none;
+            background: transparent;
+            padding: 6px 16px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            border-radius: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .segmented-tabs .tab-btn.active {
+            background: var(--surface);
+            color: var(--text-main);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            font-weight: 600;
+        }
+
+        /* Container Card */
+        .admin-card {
+            background: var(--surface);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+        }
+
+        /* Table */
+        .table-clean {
+            margin-bottom: 0;
+            font-size: 0.875rem;
+        }
+
+        .table-clean th {
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: #fafafa;
+        }
+
+        .table-clean td {
+            padding: 12px 14px;
+            vertical-align: middle;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .img-thumb {
+            width: 38px;
+            height: 38px;
+            border-radius: 6px;
+            object-fit: cover;
+            background: #f3f4f6;
+        }
+
+        .btn-action {
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-muted);
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.15s ease;
+        }
+
+        .btn-action:hover {
+            color: var(--text-main);
+            border-color: #9ca3af;
+        }
+
+        .btn-action.btn-del:hover {
+            color: #dc2626;
+            border-color: #fca5a5;
+            background-color: #fef2f2;
+        }
+
+        .pagination-clean .page-link {
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            font-size: 0.825rem;
+            margin: 0 2px;
+            border-radius: 6px;
+            padding: 4px 10px;
+        }
+
+        .pagination-clean .page-item.active .page-link {
+            background-color: #111827;
+            border-color: #111827;
+            color: #ffffff;
+        }
+
+        .modal-content {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header tối giản -->
+    <header class="site-header py-3">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-4">
+                <a href="/" class="brand-logo">
+                    <span>VietAPI</span> <span class="text-muted fw-normal fs-6">/ GraphQL</span>
+                </a>
+                <nav class="d-none d-md-flex gap-1">
+                    <a href="/" class="nav-link-custom">Trang chủ</a>
+                    <a href="/admin" class="nav-link-custom active">Quản trị</a>
+                </nav>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="/graphiql" target="_blank" class="nav-link-custom text-dark">
+                    <i class="fa-solid fa-code me-1"></i> GraphiQL
+                </a>
+                <a href="/swagger-ui.html" target="_blank" class="nav-link-custom text-dark">
+                    <i class="fa-solid fa-book-open me-1"></i> Swagger
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container py-4">
+
+        <!-- Header chuyển đổi tabs -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pb-3 mb-4 border-bottom">
+            <div>
+                <h4 class="fw-bold mb-1">Quản lý dữ liệu</h4>
+                <p class="text-muted small mb-0">Thao tác CRUD, tìm kiếm và phân trang bằng GraphQL</p>
+            </div>
+
+            <!-- Segmented Control Tabs -->
+            <div class="segmented-tabs" role="tablist">
+                <button class="tab-btn active" id="tabBtnProducts" onclick="switchTab('products')">
+                    Sản phẩm
+                </button>
+                <button class="tab-btn" id="tabBtnCategories" onclick="switchTab('categories')">
+                    Danh mục
+                </button>
+            </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- TAB 1: SẢN PHẨM -->
+        <!-- ======================================================== -->
+        <div id="sectionProducts">
+            <div class="admin-card p-3 mb-4">
+                
+                <!-- Toolbar tìm kiếm & Thêm mới -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <div class="input-group input-group-sm" style="width: 220px;">
+                            <input type="text" id="prodSearchKeyword" class="form-control" placeholder="Tìm tên sản phẩm..." onkeyup="if(event.key==='Enter') searchProducts()">
+                            <button class="btn btn-outline-secondary" onclick="searchProducts()"><i class="fa-solid fa-magnifying-glass"></i></button>
+                        </div>
+                        <select id="prodFilterCategory" class="form-select form-select-sm" style="width: 170px;" onchange="searchProducts()">
+                            <option value="">Tất cả danh mục</option>
+                        </select>
+                        <button class="btn btn-light btn-sm border" onclick="resetProductFilters()" title="Làm mới"><i class="fa-solid fa-rotate-right text-muted"></i></button>
+                    </div>
+
+                    <button class="btn btn-dark btn-sm rounded-2 px-3 fw-medium" onclick="openCreateProductModal()">
+                        <i class="fa-solid fa-plus me-1"></i> Thêm sản phẩm
+                    </button>
+                </div>
+
+                <!-- Bảng sản phẩm -->
+                <div class="table-responsive">
+                    <table class="table table-clean align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">ID</th>
+                                <th style="width: 50px;">Ảnh</th>
+                                <th>Tên sản phẩm</th>
+                                <th>Danh mục</th>
+                                <th>Đơn giá</th>
+                                <th>Kho</th>
+                                <th>Giảm giá</th>
+                                <th>Trạng thái</th>
+                                <th style="width: 130px;" class="text-end">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productTableBody">
+                            <tr><td colspan="9" class="text-center py-4 text-muted small">Đang tải dữ liệu...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Phân trang sản phẩm -->
+                <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-2">
+                    <span class="text-muted small" id="productPaginationInfo">Trang 1</span>
+                    <ul class="pagination pagination-sm pagination-clean mb-0" id="productPaginationControls"></ul>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- TAB 2: DANH MỤC -->
+        <!-- ======================================================== -->
+        <div id="sectionCategories" style="display: none;">
+            <div class="admin-card p-3 mb-4">
+                
+                <!-- Toolbar tìm kiếm & Thêm mới -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div class="d-flex gap-2 align-items-center">
+                        <div class="input-group input-group-sm" style="width: 240px;">
+                            <input type="text" id="catSearchKeyword" class="form-control" placeholder="Tìm tên danh mục..." onkeyup="if(event.key==='Enter') searchCategories()">
+                            <button class="btn btn-outline-secondary" onclick="searchCategories()"><i class="fa-solid fa-magnifying-glass"></i></button>
+                        </div>
+                        <button class="btn btn-light btn-sm border" onclick="resetCategoryFilters()" title="Làm mới"><i class="fa-solid fa-rotate-right text-muted"></i></button>
+                    </div>
+
+                    <button class="btn btn-dark btn-sm rounded-2 px-3 fw-medium" onclick="openCreateCategoryModal()">
+                        <i class="fa-solid fa-plus me-1"></i> Thêm danh mục
+                    </button>
+                </div>
+
+                <!-- Bảng danh mục -->
+                <div class="table-responsive">
+                    <table class="table table-clean align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">ID</th>
+                                <th style="width: 60px;">Icon</th>
+                                <th>Tên danh mục</th>
+                                <th style="width: 130px;" class="text-end">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="categoryTableBody">
+                            <tr><td colspan="4" class="text-center py-4 text-muted small">Đang tải dữ liệu...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Phân trang danh mục -->
+                <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-2">
+                    <span class="text-muted small" id="categoryPaginationInfo">Trang 1</span>
+                    <ul class="pagination pagination-sm pagination-clean mb-0" id="categoryPaginationControls"></ul>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Category -->
+    <div class="modal fade" id="categoryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h6 class="modal-title fw-bold" id="categoryModalTitle">Danh mục</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <form id="categoryForm" onsubmit="saveCategory(event)">
+                        <input type="hidden" id="categoryId">
+                        <div class="mb-2">
+                            <label class="form-label small text-muted mb-1">Tên danh mục *</label>
+                            <input type="text" id="categoryName" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted mb-1">Ảnh icon</label>
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <img id="categoryCurrentIconPreview" src="https://placehold.co/38x38?text=Icon" class="img-thumb" style="width: 38px; height: 38px;">
+                                <span class="small text-muted text-truncate" style="max-width: 170px;" id="categoryIconCurrentText">Chưa có ảnh</span>
+                            </div>
+                            <input type="file" id="categoryIconFile" class="form-control form-control-sm" accept="image/*" onchange="previewCategoryFile(this)">
+                            <input type="hidden" id="categoryIcon">
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-light btn-sm border" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-dark btn-sm px-3" id="btnSaveCategory">Lưu</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Product -->
+    <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h6 class="modal-title fw-bold" id="productModalTitle">Sản phẩm</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <form id="productForm" onsubmit="saveProduct(event)">
+                        <input type="hidden" id="productId">
+                        
+                        <div class="row g-2 mb-2">
+                            <div class="col-8">
+                                <label class="form-label small text-muted mb-1">Tên sản phẩm *</label>
+                                <input type="text" id="productName" class="form-control form-control-sm" required>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small text-muted mb-1">Danh mục *</label>
+                                <select id="productCategoryId" class="form-select form-select-sm" required></select>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-4">
+                                <label class="form-label small text-muted mb-1">Đơn giá (₫) *</label>
+                                <input type="number" id="productUnitPrice" class="form-control form-control-sm" min="0" step="1000" required>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small text-muted mb-1">Kho *</label>
+                                <input type="number" id="productQuantity" class="form-control form-control-sm" min="0" required>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small text-muted mb-1">Giảm giá (%)</label>
+                                <input type="number" id="productDiscount" class="form-control form-control-sm" min="0" max="100" value="0">
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-8">
+                                <label class="form-label small text-muted mb-1">Ảnh sản phẩm</label>
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <img id="productCurrentImagePreview" src="https://placehold.co/38x38?text=P" class="img-thumb" style="width: 38px; height: 38px;">
+                                    <span class="small text-muted text-truncate" style="max-width: 200px;" id="productImageCurrentText">Chưa có ảnh</span>
+                                </div>
+                                <input type="file" id="productImageFile" class="form-control form-control-sm" accept="image/*" onchange="previewProductFile(this)">
+                                <input type="hidden" id="productImages">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small text-muted mb-1">Trạng thái</label>
+                                <select id="productStatus" class="form-select form-select-sm">
+                                    <option value="1">Còn bán</option>
+                                    <option value="0">Ngừng bán</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small text-muted mb-1">Mô tả *</label>
+                            <textarea id="productDescription" class="form-control form-control-sm" rows="2" required></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-light btn-sm border" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-dark btn-sm px-3" id="btnSaveProduct">Lưu</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/js/graphql-client.js"></script>
+
+    <script>
+        let currentTab = 'products';
+        let prodCurrentPage = 0;
+        const prodPageSize = 6;
+        let prodKeyword = "";
+        let prodCategoryId = null;
+
+        let catCurrentPage = 0;
+        const catPageSize = 5;
+        let catKeyword = "";
+
+        let categoryModal, productModal;
+
+        function switchTab(tab) {
+            currentTab = tab;
+            if (tab === 'products') {
+                document.getElementById('sectionProducts').style.display = 'block';
+                document.getElementById('sectionCategories').style.display = 'none';
+                document.getElementById('tabBtnProducts').classList.add('active');
+                document.getElementById('tabBtnCategories').classList.remove('active');
+            } else {
+                document.getElementById('sectionProducts').style.display = 'none';
+                document.getElementById('sectionCategories').style.display = 'block';
+                document.getElementById('tabBtnProducts').classList.remove('active');
+                document.getElementById('tabBtnCategories').classList.add('active');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            categoryModal = new bootstrap.Modal(document.getElementById('categoryModal'));
+            productModal = new bootstrap.Modal(document.getElementById('productModal'));
+
+            loadCategoryDropdowns();
+            loadProductsTable();
+            loadCategoriesTable();
+        });
+
+        async function loadCategoryDropdowns() {
+            try {
+                const categories = await getAllCategories();
+                const filterSelect = document.getElementById('prodFilterCategory');
+                filterSelect.innerHTML = '<option value="">Tất cả danh mục</option>';
+                
+                const formSelect = document.getElementById('productCategoryId');
+                formSelect.innerHTML = '<option value="">-- Chọn --</option>';
+
+                categories.forEach(c => {
+                    filterSelect.innerHTML += `<option value="${c.categoryId}">${c.categoryName}</option>`;
+                    formSelect.innerHTML += `<option value="${c.categoryId}">${c.categoryName}</option>`;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // ==================== PRODUCT ====================
+        async function loadProductsTable() {
+            try {
+                const pageData = await getProductsPaged(prodCurrentPage, prodPageSize, prodKeyword, prodCategoryId);
+                renderProductTable(pageData.content);
+                renderProductPagination(pageData);
+            } catch (err) {
+                document.getElementById('productTableBody').innerHTML = `<tr><td colspan="9" class="text-center text-danger small py-3">${err.message}</td></tr>`;
+            }
+        }
+
+        function renderProductTable(products) {
+            const tbody = document.getElementById('productTableBody');
+            if (!products || products.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted small py-4">Không tìm thấy sản phẩm.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            products.forEach(p => {
+                let imgUrl = 'https://placehold.co/38x38?text=P';
+                if (p.images && p.images.trim() !== '') {
+                    imgUrl = `/images/${encodeURIComponent(p.images)}`;
+                }
+                const catName = p.category ? p.category.categoryName : '-';
+                const statusBadge = p.status === 1 
+                    ? '<span class="text-success small fw-medium">Còn bán</span>' 
+                    : '<span class="text-muted small">Ngừng bán</span>';
+
+                html += `
+                    <tr>
+                        <td class="text-muted">#${p.productId}</td>
+                        <td><img src="${imgUrl}" class="img-thumb" onerror="this.src='https://placehold.co/38x38?text=P'"></td>
+                        <td>
+                            <div class="fw-medium text-dark">${p.productName}</div>
+                        </td>
+                        <td><span class="text-muted">${catName}</span></td>
+                        <td class="fw-semibold">${formatCurrency(p.unitPrice)}</td>
+                        <td>${p.quantity}</td>
+                        <td>${p.discount > 0 ? `-${p.discount}%` : '-'}</td>
+                        <td>${statusBadge}</td>
+                        <td class="text-end">
+                            <button class="btn-action me-1" onclick="openEditProductModal('${p.productId}')">Sửa</button>
+                            <button class="btn-action btn-del" onclick="confirmDeleteProduct('${p.productId}')">Xóa</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function renderProductPagination(pageData) {
+            document.getElementById('productPaginationInfo').innerText = 
+                `Trang ${pageData.pageNumber + 1} / ${pageData.totalPages || 1} (${pageData.totalElements} sản phẩm)`;
+
+            const ul = document.getElementById('productPaginationControls');
+            ul.innerHTML = '';
+
+            const prevDisabled = pageData.first ? 'disabled' : '';
+            ul.innerHTML += `<li class="page-item ${prevDisabled}"><a class="page-link" href="javascript:void(0)" onclick="goToProductPage(${pageData.pageNumber - 1})">&laquo;</a></li>`;
+
+            for (let i = 0; i < pageData.totalPages; i++) {
+                const active = i === pageData.pageNumber ? 'active' : '';
+                ul.innerHTML += `<li class="page-item ${active}"><a class="page-link" href="javascript:void(0)" onclick="goToProductPage(${i})">${i + 1}</a></li>`;
+            }
+
+            const nextDisabled = pageData.last ? 'disabled' : '';
+            ul.innerHTML += `<li class="page-item ${nextDisabled}"><a class="page-link" href="javascript:void(0)" onclick="goToProductPage(${pageData.pageNumber + 1})">&raquo;</a></li>`;
+        }
+
+        function goToProductPage(p) { prodCurrentPage = p; loadProductsTable(); }
+        function searchProducts() {
+            prodKeyword = document.getElementById('prodSearchKeyword').value.trim();
+            const cat = document.getElementById('prodFilterCategory').value;
+            prodCategoryId = cat ? parseInt(cat) : null;
+            prodCurrentPage = 0;
+            loadProductsTable();
+        }
+        function resetProductFilters() {
+            document.getElementById('prodSearchKeyword').value = '';
+            document.getElementById('prodFilterCategory').value = '';
+            prodKeyword = ''; prodCategoryId = null; prodCurrentPage = 0;
+            loadProductsTable();
+        }
+
+        // ==================== UPLOAD & PREVIEW FILE HELPERS ====================
+        function previewCategoryFile(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('categoryCurrentIconPreview').src = e.target.result;
+                    document.getElementById('categoryIconCurrentText').innerText = input.files[0].name;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function previewProductFile(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('productCurrentImagePreview').src = e.target.result;
+                    document.getElementById('productImageCurrentText').innerText = input.files[0].name;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function uploadFileViaAjax(fileInput) {
+            if (fileInput.files && fileInput.files[0]) {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    return data.filename;
+                } else {
+                    throw new Error(data.message || 'Lỗi tải file lên server');
+                }
+            }
+            return null;
+        }
+
+        function openCreateProductModal() {
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            document.getElementById('productImages').value = '';
+            document.getElementById('productImageFile').value = '';
+            document.getElementById('productCurrentImagePreview').src = 'https://placehold.co/38x38?text=P';
+            document.getElementById('productImageCurrentText').innerText = 'Chưa chọn ảnh';
+            document.getElementById('productModalTitle').innerText = 'Thêm sản phẩm mới';
+            productModal.show();
+        }
+
+        async function openEditProductModal(id) {
+            try {
+                const p = await getProductById(id);
+                if (!p) return;
+                document.getElementById('productId').value = p.productId;
+                document.getElementById('productName').value = p.productName;
+                document.getElementById('productCategoryId').value = p.category ? p.category.categoryId : '';
+                document.getElementById('productUnitPrice').value = p.unitPrice;
+                document.getElementById('productQuantity').value = p.quantity;
+                document.getElementById('productDiscount').value = p.discount || 0;
+                document.getElementById('productImages').value = p.images || '';
+                document.getElementById('productImageFile').value = '';
+                if (p.images && p.images.trim() !== '') {
+                    document.getElementById('productCurrentImagePreview').src = '/images/' + encodeURIComponent(p.images);
+                    document.getElementById('productImageCurrentText').innerText = p.images;
+                } else {
+                    document.getElementById('productCurrentImagePreview').src = 'https://placehold.co/38x38?text=P';
+                    document.getElementById('productImageCurrentText').innerText = 'Chưa có ảnh';
+                }
+                document.getElementById('productStatus').value = p.status;
+                document.getElementById('productDescription').value = p.description || '';
+                document.getElementById('productModalTitle').innerText = `Chỉnh sửa sản phẩm #${p.productId}`;
+                productModal.show();
+            } catch (err) { Swal.fire('Lỗi', err.message, 'error'); }
+        }
+
+        async function saveProduct(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSaveProduct');
+            btn.disabled = true;
+            btn.innerText = 'Đang lưu...';
+
+            try {
+                const id = document.getElementById('productId').value;
+                const fileInput = document.getElementById('productImageFile');
+                let finalImage = document.getElementById('productImages').value;
+
+                // Nếu có chọn file mới thì upload qua AJAX lên server
+                const uploadedFilename = await uploadFileViaAjax(fileInput);
+                if (uploadedFilename) {
+                    finalImage = uploadedFilename;
+                }
+
+                const input = {
+                    productName: document.getElementById('productName').value.trim(),
+                    categoryId: document.getElementById('productCategoryId').value,
+                    unitPrice: parseFloat(document.getElementById('productUnitPrice').value),
+                    quantity: parseInt(document.getElementById('productQuantity').value),
+                    discount: parseFloat(document.getElementById('productDiscount').value || 0),
+                    images: finalImage,
+                    status: parseInt(document.getElementById('productStatus').value),
+                    description: document.getElementById('productDescription').value.trim()
+                };
+
+                if (id) {
+                    await updateProduct(id, input);
+                    Swal.fire({ title: 'Thành công', text: 'Đã cập nhật sản phẩm!', icon: 'success', timer: 1500, showConfirmButton: false });
+                } else {
+                    await createProduct(input);
+                    Swal.fire({ title: 'Thành công', text: 'Đã thêm sản phẩm!', icon: 'success', timer: 1500, showConfirmButton: false });
+                }
+                productModal.hide();
+                loadProductsTable();
+            } catch (err) {
+                Swal.fire('Lỗi', err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Lưu';
+            }
+        }
+
+        async function confirmDeleteProduct(id) {
+            const res = await Swal.fire({
+                title: 'Xóa sản phẩm?',
+                text: `Bạn có chắc chắn muốn xóa sản phẩm #${id}?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#111827',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Xóa',
+                cancelButtonText: 'Hủy'
+            });
+            if (res.isConfirmed) {
+                try {
+                    await deleteProduct(id);
+                    loadProductsTable();
+                } catch (err) { Swal.fire('Lỗi', err.message, 'error'); }
+            }
+        }
+
+        // ==================== CATEGORY ====================
+        async function loadCategoriesTable() {
+            try {
+                const pageData = await getCategoriesPaged(catCurrentPage, catPageSize, catKeyword);
+                renderCategoryTable(pageData.content);
+                renderCategoryPagination(pageData);
+            } catch (err) {
+                document.getElementById('categoryTableBody').innerHTML = `<tr><td colspan="4" class="text-center text-danger small py-3">${err.message}</td></tr>`;
+            }
+        }
+
+        function renderCategoryTable(categories) {
+            const tbody = document.getElementById('categoryTableBody');
+            if (!categories || categories.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted small py-4">Không tìm thấy danh mục.</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            categories.forEach(c => {
+                let iconHtml = '<i class="fa-solid fa-folder text-muted"></i>';
+                if (c.icon && c.icon.trim() !== '') {
+                    iconHtml = `<img src="/images/${encodeURIComponent(c.icon)}" class="img-thumb" onerror="this.src='https://placehold.co/38x38?text=C'">`;
+                }
+
+                html += `
+                    <tr>
+                        <td class="text-muted">#${c.categoryId}</td>
+                        <td>${iconHtml}</td>
+                        <td class="fw-medium text-dark">${c.categoryName}</td>
+                        <td class="text-end">
+                            <button class="btn-action me-1" onclick="openEditCategoryModal('${c.categoryId}')">Sửa</button>
+                            <button class="btn-action btn-del" onclick="confirmDeleteCategory('${c.categoryId}')">Xóa</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function renderCategoryPagination(pageData) {
+            document.getElementById('categoryPaginationInfo').innerText = 
+                `Trang ${pageData.pageNumber + 1} / ${pageData.totalPages || 1} (${pageData.totalElements} danh mục)`;
+
+            const ul = document.getElementById('categoryPaginationControls');
+            ul.innerHTML = '';
+
+            const prevDisabled = pageData.first ? 'disabled' : '';
+            ul.innerHTML += `<li class="page-item ${prevDisabled}"><a class="page-link" href="javascript:void(0)" onclick="goToCategoryPage(${pageData.pageNumber - 1})">&laquo;</a></li>`;
+
+            for (let i = 0; i < pageData.totalPages; i++) {
+                const active = i === pageData.pageNumber ? 'active' : '';
+                ul.innerHTML += `<li class="page-item ${active}"><a class="page-link" href="javascript:void(0)" onclick="goToCategoryPage(${i})">${i + 1}</a></li>`;
+            }
+
+            const nextDisabled = pageData.last ? 'disabled' : '';
+            ul.innerHTML += `<li class="page-item ${nextDisabled}"><a class="page-link" href="javascript:void(0)" onclick="goToCategoryPage(${pageData.pageNumber + 1})">&raquo;</a></li>`;
+        }
+
+        function goToCategoryPage(p) { catCurrentPage = p; loadCategoriesTable(); }
+        function searchCategories() {
+            catKeyword = document.getElementById('catSearchKeyword').value.trim();
+            catCurrentPage = 0;
+            loadCategoriesTable();
+        }
+        function resetCategoryFilters() {
+            document.getElementById('catSearchKeyword').value = '';
+            catKeyword = ''; catCurrentPage = 0;
+            loadCategoriesTable();
+        }
+
+        function openCreateCategoryModal() {
+            document.getElementById('categoryForm').reset();
+            document.getElementById('categoryId').value = '';
+            document.getElementById('categoryIcon').value = '';
+            document.getElementById('categoryIconFile').value = '';
+            document.getElementById('categoryCurrentIconPreview').src = 'https://placehold.co/38x38?text=Icon';
+            document.getElementById('categoryIconCurrentText').innerText = 'Chưa chọn ảnh';
+            document.getElementById('categoryModalTitle').innerText = 'Thêm danh mục mới';
+            categoryModal.show();
+        }
+
+        async function openEditCategoryModal(id) {
+            try {
+                const c = await getCategoryById(id);
+                if (!c) return;
+                document.getElementById('categoryId').value = c.categoryId;
+                document.getElementById('categoryName').value = c.categoryName;
+                document.getElementById('categoryIcon').value = c.icon || '';
+                document.getElementById('categoryIconFile').value = '';
+                if (c.icon && c.icon.trim() !== '') {
+                    document.getElementById('categoryCurrentIconPreview').src = '/images/' + encodeURIComponent(c.icon);
+                    document.getElementById('categoryIconCurrentText').innerText = c.icon;
+                } else {
+                    document.getElementById('categoryCurrentIconPreview').src = 'https://placehold.co/38x38?text=Icon';
+                    document.getElementById('categoryIconCurrentText').innerText = 'Chưa có ảnh';
+                }
+                document.getElementById('categoryModalTitle').innerText = `Chỉnh sửa danh mục #${c.categoryId}`;
+                categoryModal.show();
+            } catch (err) { Swal.fire('Lỗi', err.message, 'error'); }
+        }
+
+        async function saveCategory(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSaveCategory');
+            btn.disabled = true;
+            btn.innerText = 'Đang lưu...';
+
+            try {
+                const id = document.getElementById('categoryId').value;
+                const name = document.getElementById('categoryName').value.trim();
+                const fileInput = document.getElementById('categoryIconFile');
+                let finalIcon = document.getElementById('categoryIcon').value;
+
+                // Nếu có chọn file mới thì upload qua AJAX lên server
+                const uploadedFilename = await uploadFileViaAjax(fileInput);
+                if (uploadedFilename) {
+                    finalIcon = uploadedFilename;
+                }
+
+                if (id) {
+                    await updateCategory(id, name, finalIcon);
+                    Swal.fire({ title: 'Thành công', text: 'Đã cập nhật danh mục!', icon: 'success', timer: 1500, showConfirmButton: false });
+                } else {
+                    await createCategory(name, finalIcon);
+                    Swal.fire({ title: 'Thành công', text: 'Đã thêm danh mục!', icon: 'success', timer: 1500, showConfirmButton: false });
+                }
+                categoryModal.hide();
+                loadCategoriesTable();
+                loadCategoryDropdowns();
+            } catch (err) {
+                Swal.fire('Lỗi', err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Lưu';
+            }
+        }
+
+        async function confirmDeleteCategory(id) {
+            const res = await Swal.fire({
+                title: 'Xóa danh mục?',
+                text: `Xóa danh mục #${id} có thể ảnh hưởng đến sản phẩm thuộc danh mục này!`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#111827',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Xóa',
+                cancelButtonText: 'Hủy'
+            });
+            if (res.isConfirmed) {
+                try {
+                    await deleteCategory(id);
+                    loadCategoriesTable();
+                    loadCategoryDropdowns();
+                } catch (err) { Swal.fire('Lỗi', err.message, 'error'); }
+            }
+        }
+    </script>
+</body>
+</html>

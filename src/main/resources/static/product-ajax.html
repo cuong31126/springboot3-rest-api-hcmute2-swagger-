@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quản lý Sản phẩm (Product RESTful API & AJAX) - Spring Boot 3</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- jQuery 3.6.4 -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+    <style>
+        .product-img {
+            width: 70px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .table-responsive {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+    <!-- Thanh Navigation Bar hỗ trợ chuyển đổi giữa Category và Product -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="/category-ajax.html"><i class="fas fa-layer-group me-2"></i>VietApi -
+                Admin Dashboard</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/category-ajax.html"><i class="fas fa-tags me-1"></i>Quản lý Danh mục
+                            (Category)</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active fw-bold" href="/product-ajax.html"><i
+                                class="fas fa-box-open me-1"></i>Quản lý Sản phẩm (Product)</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/swagger-ui/index.html" target="_blank"><i
+                                class="fas fa-book-open me-1"></i>Swagger 3 Docs</a>
+                    </li>
+                </ul>
+                <span class="navbar-text text-white">
+                    <i class="fas fa-user-circle me-1"></i>ThS. Nguyễn Hữu Trung - HCMUTE
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container py-3">
+        <!-- Header & Chuyển hướng nhanh -->
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+            <div>
+                <h3 class="fw-bold text-primary mb-1">
+                    <i class="fas fa-boxes-stacked me-2"></i>Quản lý Sản phẩm (Product AJAX)
+                </h3>
+                <small class="text-muted">CRUD Sản phẩm bằng AJAX kết hợp RESTful API & Upload ảnh</small>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="/category-ajax.html" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left me-1"></i>Về Quản lý Danh mục
+                </a>
+                <button class="btn btn-success" onclick="showCreateNewProductModal()">
+                    <i class="fas fa-plus me-1"></i>Thêm Sản phẩm Ajax
+                </button>
+            </div>
+        </div>
+
+        <!-- Bảng danh sách Product -->
+        <div class="table-responsive p-3">
+            <table class="table table-striped table-hover align-middle mb-0" id="productTable">
+                <thead class="table-primary">
+                    <tr>
+                        <th style="width: 70px;">ID</th>
+                        <th style="width: 90px;">Hình ảnh</th>
+                        <th>Tên Sản phẩm</th>
+                        <th>Đơn giá (VNĐ)</th>
+                        <th>Số lượng</th>
+                        <th>Giảm giá (%)</th>
+                        <th style="width: 180px;" class="text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="productTableBody">
+                    <!-- Dữ liệu nạp từ API qua jQuery AJAX -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal 1: Thêm mới Product -->
+    <div class="modal fade" tabindex="-1" role="dialog" id="createProductModal" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <form id="addProduct" method="post" onsubmit="return false;" enctype="multipart/form-data">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title"><i class="fas fa-box-open me-2"></i>Thêm Sản phẩm mới</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="form-label fw-bold">Tên Sản phẩm <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="productName"
+                                    placeholder="Nhập tên sản phẩm..." required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Danh mục <span class="text-danger">*</span></label>
+                                <select class="form-select select-category" name="categoryId" required>
+                                    <!-- Nạp động từ API category -->
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Đơn giá (VNĐ) <span
+                                        class="text-danger">*</span></label>
+                                <input type="number" class="form-control" name="unitPrice" min="0" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Số lượng tồn <span
+                                        class="text-danger">*</span></label>
+                                <input type="number" class="form-control" name="quantity" min="0" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Giảm giá (%)</label>
+                                <input type="number" class="form-control" name="discount" min="0" max="100" value="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Hình ảnh sản phẩm</label>
+                                <input type="file" class="form-control" name="imageFile" accept="image/*">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Trạng thái</label>
+                                <select class="form-select" name="status">
+                                    <option value="1">Đang bán</option>
+                                    <option value="0">Ngừng kinh doanh</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Mô tả sản phẩm</label>
+                                <textarea class="form-control" name="description" rows="2"
+                                    placeholder="Mô tả chi tiết..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i>Lưu Sản
+                            phẩm</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Cập nhật Product (CHỨC NĂNG SỬA SẢN PHẨM MỞ RỘNG) -->
+    <div class="modal fade" tabindex="-1" role="dialog" id="updateProductModal" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <form id="updateProduct" method="post" onsubmit="return false;" enctype="multipart/form-data">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Cập nhật Sản phẩm ha</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="up_productId" name="productId">
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="form-label fw-bold">Tên Sản phẩm <span
+                                        class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="up_productName" name="productName" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Danh mục <span class="text-danger">*</span></label>
+                                <select class="form-select select-category" id="up_categoryId" name="categoryId"
+                                    required>
+                                    <!-- Nạp động từ API category -->
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Đơn giá (VNĐ) <span
+                                        class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="up_unitPrice" name="unitPrice" min="0"
+                                    required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Số lượng tồn <span
+                                        class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="up_quantity" name="quantity" min="0"
+                                    required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Giảm giá (%)</label>
+                                <input type="number" class="form-control" id="up_discount" name="discount" min="0"
+                                    max="100" value="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Đổi ảnh mới (Để trống nếu giữ ảnh cũ)</label>
+                                <input type="file" class="form-control" id="up_imageFile" name="imageFile"
+                                    accept="image/*">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Trạng thái</label>
+                                <select class="form-select" id="up_status" name="status">
+                                    <option value="1">Đang bán</option>
+                                    <option value="0">Ngừng kinh doanh</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Mô tả sản phẩm</label>
+                                <textarea class="form-control" id="up_description" name="description"
+                                    rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-check me-1"></i>Lưu Cập
+                            nhật</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
+
+    <!-- ==================================================================== -->
+    <!-- PHẦN MÃ JAVASCRIPT: XỬ LÝ AJAX TƯƠNG TÁC VỚI RESTFUL API SPRING BOOT 3 -->
+    <!-- ==================================================================== -->
+    <script type="text/javascript">
+        /**
+         * BIẾN TOÀN CỤC:
+         * Lưu trữ tạm danh sách sản phẩm vừa tải từ Server về máy Client.
+         * Tác dụng: Khi người dùng bấm nút "Sửa", ta chỉ cần tra cứu trong mảng này
+         * để điền ngay dữ liệu cũ vào form mà không cần tốn thêm một lượt gọi mạng.
+         */
+        var currentProductList = [];
+
+        /**
+         * SỰ KIỆN: $(document).ready(...)
+         * Chạy TỰ ĐỘNG ngay khi trình duyệt hoàn tất việc tải và dựng cấu trúc DOM của trang web.
+         */
+        $(document).ready(function () {
+            // 1. Tự động tải danh sách sản phẩm từ backend đổ vào bảng
+            loadProducts();
+
+            // 2. Tự động tải danh sách danh mục đổ vào thẻ <select> để người dùng chọn khi thêm/sửa
+            loadCategoryDropdown();
+
+            // =================================================================
+            // CHỨC NĂNG 1: THÊM SẢN PHẨM MỚI BẰNG AJAX (POST)
+            // =================================================================
+            $("form#addProduct").submit(function (e) {
+                // e.preventDefault(): Chặn hành vi mặc định của thẻ <form> (không để trang web bị F5/reload)
+                e.preventDefault();
+
+                // new FormData(this): Đóng gói toàn bộ các ô nhập liệu của form (gồm cả file ảnh nhị phân)
+                var formData = new FormData(this);
+
+                /**
+                 * $.ajax(): Hàm nòng cốt của jQuery để gửi yêu cầu HTTP bất đồng bộ ngầm
+                 */
+                $.ajax({
+                    url: '/api/product/addProduct', // Địa chỉ API Backend xử lý
+                    type: 'POST',                    // Phương thức HTTP POST để tạo mới tài nguyên
+                    dataType: "json",                // Kỳ vọng Server trả về kết quả định dạng JSON
+                    data: formData,                  // Dữ liệu form và file ảnh gửi lên
+                    cache: false,                    // Không lưu bộ nhớ đệm (cache) trình duyệt
+                    contentType: false,              // BẮT BUỘC: Để trình duyệt tự thiết lập multipart/form-data kèm boundary
+                    processData: false,              // BẮT BUỘC: Không tự biến đổi dữ liệu file thành chuỗi query string
+                    success: function (data) {
+                        // Khối này chạy khi Backend trả về mã thành công HTTP 200 OK
+                        alert("Thêm sản phẩm thành công!");
+                        // Tự động đóng popup Modal Thêm mới
+                        var myModal = bootstrap.Modal.getInstance(document.getElementById('createProductModal'));
+                        if (myModal) myModal.hide();
+                        // Tải lại bảng dữ liệu mới mà KHÔNG cần reload toàn trang
+                        loadProducts();
+                    },
+                    error: function (xhr) {
+                        // Khối này chạy khi Backend trả về mã lỗi (HTTP 400, 500...)
+                        var msg = xhr.responseJSON ? xhr.responseJSON.message : "Lỗi thêm sản phẩm";
+                        alert("Thất bại: " + msg);
+                    }
+                });
+            });
+
+            // =================================================================
+            // CHỨC NĂNG 2: CẬP NHẬT SẢN PHẨM BẰNG AJAX (PUT)
+            // =================================================================
+            $("form#updateProduct").submit(function (e) {
+                e.preventDefault(); // Chặn tải lại trang
+                var formData = new FormData(this);
+
+                $.ajax({
+                    url: '/api/product/updateProduct', // API cập nhật
+                    type: 'PUT',                       // Phương thức HTTP PUT để sửa/cập nhật dữ liệu
+                    dataType: "json",
+                    data: formData,
+                    cache: false,
+                    contentType: false,                // Cho phép truyền file ảnh mới (nếu có)
+                    processData: false,
+                    success: function (data) {
+                        alert("Cập nhật sản phẩm thành công!");
+                        // Đóng Modal Sửa
+                        var myModal = bootstrap.Modal.getInstance(document.getElementById('updateProductModal'));
+                        if (myModal) myModal.hide();
+                        // Cập nhật lại giao diện bảng ngay lập tức
+                        loadProducts();
+                    },
+                    error: function (xhr) {
+                        var msg = xhr.responseJSON ? xhr.responseJSON.message : "Lỗi cập nhật sản phẩm";
+                        alert("Thất bại: " + msg);
+                    }
+                });
+            });
+
+            // =================================================================
+            // CHỨC NĂNG 3: XÓA SẢN PHẨM BẰNG AJAX (DELETE)
+            // =================================================================
+            /**
+             * Vì sao dùng $(document).delegate(...) hoặc $(document).on(...)?
+             * BỞI VÌ: Các dòng sản phẩm và nút "Xóa" được sinh ra ĐỘNG sau khi gọi API nạp vào bảng.
+             * Nếu dùng hàm click thông thường $('.btn-delete-product').click(...) thì sẽ không bắt được sự kiện!
+             */
+            $(document).delegate('.btn-delete-product', 'click', function (e) {
+                e.preventDefault();
+                // Lấy ID sản phẩm được lưu trong thuộc tính data-id="..." của nút Xóa
+                var id = $(this).data('id');
+
+                // Bật hộp thoại popup hỏi người dùng có chắc chắn muốn xóa không
+                if (confirm('Bạn có chắc chắn muốn xóa sản phẩm ID: ' + id + ' không?')) {
+                    // Lấy thẻ <tr> (dòng của bảng) chứa nút vừa bấm
+                    var parent = $(this).closest('tr');
+
+                    $.ajax({
+                        type: "DELETE", // Phương thức HTTP DELETE để xóa tài nguyên
+                        url: '/api/product/deleteProduct?productId=' + id, // Truyền ID cần xóa qua URL
+                        dataType: "json",
+                        success: function (res) {
+                            // Hiệu ứng Animation: Làm mờ dần dòng đó trong 0.5s rồi gỡ khỏi DOM (không giật màn hình)
+                            parent.fadeOut('slow', function () { $(this).remove(); });
+                            alert("Xóa thành công sản phẩm ID: " + id);
+                        },
+                        error: function (xhr) {
+                            alert("Không thể xóa sản phẩm này (có thể do ràng buộc khóa ngoại)");
+                        }
+                    });
+                }
+            });
+        });
+
+        // =====================================================================
+        // HÀM BỔ TRỢ 1: GỌI API LẤY DANH SÁCH SẢN PHẨM VÀ VẼ LÊN BẢNG (GET)
+        // =====================================================================
+        function loadProducts() {
+            /**
+             * $.getJSON(url, callback): Là hàm rút gọn tiện lợi của $.ajax({ type: 'GET', dataType: 'json' })
+             */
+            $.getJSON('/api/product', function (json) {
+                // Xử lý linh hoạt: Nếu API trả về mảng trực tiếp hoặc đóng gói trong thuộc tính body
+                var items = Array.isArray(json) ? json : (json.body || []);
+                currentProductList = items; // Lưu vào biến toàn cục để phục vụ hàm sửa
+                var tbody = $('#productTableBody');
+                tbody.empty(); // Xóa sạch dữ liệu cũ trong bảng trước khi chèn mới
+
+                // Nếu cơ sở dữ liệu chưa có sản phẩm nào
+                if (items.length === 0) {
+                    tbody.append('<tr><td colspan="7" class="text-center text-muted py-4">Chưa có sản phẩm nào trong hệ thống</td></tr>');
+                    return;
+                }
+
+                // Duyệt qua từng sản phẩm trong mảng JSON trả về và tạo từng dòng <tr>
+                var tr = [];
+                for (var i = 0; i < items.length; i++) {
+                    var item = items[i];
+
+                    // Xử lý hiển thị ảnh: Nếu có ảnh thì gọi API xem ảnh /admin/products/images/{filename}
+                    var imgHtml = item.images ? 
+                        '<img src="/admin/products/images/' + item.images + '" class="product-img" alt="Ảnh SP">' :
+                        '<span class="badge bg-secondary">Chưa có ảnh</span>';
+
+                    tr.push('<tr>');
+                    tr.push('<td><span class="badge bg-light text-dark border">' + item.productId + '</span></td>');
+                    tr.push('<td>' + imgHtml + '</td>');
+                    tr.push('<td class="fw-bold">' + item.productName + '</td>');
+                    // Định dạng số tiền có dấu chấm phân cách hàng nghìn (ví dụ: 150.000 đ)
+                    tr.push('<td class="text-danger fw-bold">' + Number(item.unitPrice).toLocaleString('vi-VN') + ' đ</td>');
+                    tr.push('<td>' + item.quantity + '</td>');
+                    tr.push('<td><span class="badge bg-warning text-dark">' + item.discount + '%</span></td>');
+                    tr.push('<td class="text-center">' +
+                        '<button type="button" class="btn btn-outline-warning btn-sm me-2" onclick="showEditProductModal(' + item.productId + ')">' +
+                        '<i class="fa fa-edit me-1"></i>Sửa</button>' +
+                        '<button type="button" class="btn btn-outline-danger btn-sm btn-delete-product" data-id="' + item.productId + '">' +
+                        '<i class="fa fa-trash me-1"></i>Xóa</button>' +
+                        '</td>');
+                    tr.push('</tr>');
+                }
+                // Chèn tất cả các dòng HTML vào phần thân của bảng
+                tbody.append(tr.join(''));
+            });
+        }
+
+        // =====================================================================
+        // HÀM BỔ TRỢ 2: GỌI API LẤY DANH SÁCH CATEGORY ĐỂ ĐỔ VÀO THẺ <SELECT>
+        // =====================================================================
+        function loadCategoryDropdown() {
+            $.getJSON('/api/category', function (json) {
+                var items = Array.isArray(json) ? json : (json.body || []);
+                var select = $('.select-category');
+                select.empty();
+                for (var i = 0; i < items.length; i++) {
+                    select.append('<option value="' + items[i].categoryId + '">' + items[i].categoryName + '</option>');
+                }
+            });
+        }
+
+        // =====================================================================
+        // HÀM BỔ TRỢ 3: MỞ MODAL THÊM MỚI SẢN PHẨM
+        // =====================================================================
+        function showCreateNewProductModal() {
+            // Xóa sạch các ô nhập cũ trong form
+            $('form#addProduct')[0].reset();
+            var myModal = new bootstrap.Modal(document.getElementById('createProductModal'));
+            myModal.show();
+        }
+
+        // =====================================================================
+        // HÀM BỔ TRỢ 4: MỞ MODAL SỬA VÀ ĐIỀN DỮ LIỆU CŨ VÀO FORM
+        // =====================================================================
+        function showEditProductModal(productId) {
+            // Tìm thông tin sản phẩm có ID khớp trong danh sách tạm đã lưu
+            var prod = currentProductList.find(function (p) { return p.productId == productId; });
+            if (!prod) return;
+
+            // Gán dữ liệu cũ của sản phẩm vào từng ô nhập liệu trong Modal
+            $('#up_productId').val(prod.productId);
+            $('#up_productName').val(prod.productName);
+            $('#up_unitPrice').val(prod.unitPrice);
+            $('#up_quantity').val(prod.quantity);
+            $('#up_discount').val(prod.discount);
+            $('#up_description').val(prod.description || '');
+            $('#up_status').val(prod.status);
+            if (prod.category && prod.category.categoryId) {
+                $('#up_categoryId').val(prod.category.categoryId);
+            }
+            $('#up_imageFile').val(''); // Reset ô chọn ảnh mới
+
+            // Kích hoạt hiển thị Modal Sửa
+            var myModal = new bootstrap.Modal(document.getElementById('updateProductModal'));
+            myModal.show();
+        }
+    </script>
+</body>
+
+</html>

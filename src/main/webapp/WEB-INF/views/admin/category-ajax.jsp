@@ -1,0 +1,297 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ include file="/common/taglib.jsp"%>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quản lý Danh mục (RESTful API & AJAX) - Spring Boot 3</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"
+          crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- jQuery 3.6.4 theo tài liệu bài giảng -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script>var contextPath = "${pageContext.request.contextPath}";</script>
+
+    <style>
+        .category-img {
+            width: 70px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .table-responsive {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+    <!-- Header Include -->
+    <%@ include file="/common/admin/header.jsp" %>
+
+    <main class="container py-3">
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+            <div>
+                <h3 class="fw-bold text-primary mb-1">
+                    <i class="fas fa-list-check me-2"></i>Quản lý Danh mục (Category AJAX)
+                </h3>
+                <small class="text-muted">CRUD Danh mục bất đồng bộ không tải lại trang thông qua RESTful API</small>
+            </div>
+            <div>
+                <button class="btn btn-success" onclick="showCreateNewCategoryModal()">
+                    <i class="fas fa-plus me-1"></i>Thêm Category Ajax
+                </button>
+            </div>
+        </div>
+
+        <!-- Bảng danh sách Category nạp động từ RESTful API -->
+        <div class="table-responsive p-3">
+            <table class="table table-striped table-hover align-middle mb-0" id="categoryTable">
+                <thead class="table-primary">
+                    <tr>
+                        <th style="width: 100px;">ID</th>
+                        <th style="width: 120px;">Icon</th>
+                        <th>Tên Danh mục</th>
+                        <th style="width: 180px;" class="text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="categoryTableBody">
+                    <!-- Dữ liệu nạp từ API qua jQuery AJAX sẽ xuất hiện ở đây -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal 1: Thêm mới Category (Form-data có file icon) -->
+    <div class="modal fade" tabindex="-1" role="dialog" id="createCategoryModal" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <form id="addCategory" method="post" onsubmit="return false;" enctype="multipart/form-data">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title"><i class="fas fa-folder-plus me-2"></i>Thêm Category mới</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="new_categoryname" class="form-label fw-bold">Tên Danh mục <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="new_categoryname" name="categoryName" placeholder="Nhập tên danh mục..." required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_icon" class="form-label fw-bold">Hình ảnh đại diện (Icon)</label>
+                            <input type="file" class="form-control" id="new_icon" name="icon" accept="image/*">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i>Lưu Category</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Cập nhật Category (Form-data cập nhật tên và file ảnh mới) -->
+    <div class="modal fade" tabindex="-1" role="dialog" id="updateCategoryInfoModal" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Cập nhật Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Thông tin hiện tại -->
+                    <div class="card mb-3 border-info">
+                        <div class="card-header bg-info text-white py-1">
+                            <small class="fw-bold"><i class="fas fa-info-circle me-1"></i>Thông tin danh mục hiện tại</small>
+                        </div>
+                        <div class="card-body py-2">
+                            <p class="mb-1" id="updateCategoryInfoModalId"></p>
+                            <p class="mb-1" id="updateCategoryInfoModalName"></p>
+                            <p class="mb-0" id="updateCategoryInfoModalIcon"></p>
+                        </div>
+                    </div>
+
+                    <!-- Form cập nhật -->
+                    <form id="updateCategory" method="post" onsubmit="return false;" enctype="multipart/form-data">
+                        <input type="hidden" id="categoryId_up" name="categoryId">
+                        <div class="mb-3">
+                            <label for="categoryName_up" class="form-label fw-bold">Tên Danh mục mới <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="categoryName_up" name="categoryName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="icon_up" class="form-label fw-bold">Đổi ảnh mới (Để trống nếu giữ ảnh cũ)</label>
+                            <input type="file" class="form-control" id="icon_up" name="icon" accept="image/*">
+                        </div>
+                        <div class="text-end">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-check me-1"></i>Cập nhật</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Include -->
+    <%@ include file="/common/admin/footer.jsp" %>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+
+    <!-- JAVASCRIPT XỬ LÝ AJAX THEO ĐÚNG TÀI LIỆU BÀI GIẢNG -->
+    <script type="text/javascript">
+        $(document).ready(function() {
+            // 1. Tải danh sách category khi trang web vừa load xong
+            loadCategories();
+
+            // 2. Bắt sự kiện submit form Thêm Category
+            $("form#addCategory").submit(function(e) {
+                e.preventDefault();
+                var formData = new FormData(this);
+                $.ajax({
+                    url: contextPath + '/api/category/addCategory',
+                    type: 'POST',
+                    dataType: "json",
+                    data: formData,
+                    cache: false,
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        alert("Thêm danh mục thành công!");
+                        var myModal = bootstrap.Modal.getInstance(document.getElementById('createCategoryModal'));
+                        if (myModal) myModal.hide();
+                        loadCategories(); // Tải lại bảng mà không cần F5
+                    },
+                    error: function(xhr) {
+                        var msg = xhr.responseJSON ? xhr.responseJSON.message : "Lỗi thêm danh mục";
+                        alert("Thất bại: " + msg);
+                    }
+                });
+            });
+
+            // 3. Bắt sự kiện submit form Cập nhật Category
+            $("form#updateCategory").submit(function(e) {
+                e.preventDefault();
+                var formData = new FormData(this);
+                $.ajax({
+                    url: contextPath + '/api/category/updateCategory',
+                    type: 'PUT',
+                    dataType: "json",
+                    data: formData,
+                    cache: false,
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        alert("Cập nhật danh mục thành công!");
+                        var myModal = bootstrap.Modal.getInstance(document.getElementById('updateCategoryInfoModal'));
+                        if (myModal) myModal.hide();
+                        loadCategories(); // Tải lại bảng
+                    },
+                    error: function(xhr) {
+                        var msg = xhr.responseJSON ? xhr.responseJSON.message : "Lỗi cập nhật danh mục";
+                        alert("Thất bại: " + msg);
+                    }
+                });
+            });
+
+            // 4. Bắt sự kiện Xóa Category bằng Delegate Event
+            $(document).delegate('.btn-delete-cate', 'click', function(e) {
+                e.preventDefault();
+                var id = $(this).data('id');
+                if (confirm('Do you really want to delete record? Bạn có chắc chắn muốn xóa danh mục ID ' + id + ' không?')) {
+                    var parent = $(this).closest('tr');
+                    $.ajax({
+                        type: "DELETE",
+                        url: contextPath + '/api/category/deleteCategory?categoryId=' + id,
+                        dataType: "json",
+                        success: function(res) {
+                            parent.fadeOut('slow', function() {
+                                $(this).remove();
+                            });
+                            alert("Xóa thành công danh mục ID: " + id);
+                        },
+                        error: function(xhr) {
+                            var msg = xhr.responseJSON ? xhr.responseJSON.message : "Không thể xóa";
+                            alert("Lỗi khi xóa: " + msg);
+                        }
+                    });
+                }
+            });
+        });
+
+        // Hàm gọi API lấy danh sách Category và chèn vào Table
+        function loadCategories() {
+            $.getJSON(contextPath + '/api/category', function(json) {
+                // Hỗ trợ cả 2 định dạng: mảng trực tiếp hoặc đóng gói trong { body: [...] }
+                var items = Array.isArray(json) ? json : (json.body || []);
+                var tbody = $('#categoryTableBody');
+                tbody.empty();
+
+                if (items.length === 0) {
+                    tbody.append('<tr><td colspan="4" class="text-center text-muted py-4">Chưa có danh mục nào trong hệ thống</td></tr>');
+                    return;
+                }
+
+                var tr = [];
+                for (var i = 0; i < items.length; i++) {
+                    var item = items[i];
+                    var imgHtml = item.icon ? 
+                        '<img src="/admin/categories/images/' + item.icon + '" class="category-img" alt="Icon">' :
+                        '<span class="badge bg-secondary">Chưa có ảnh</span>';
+
+                    tr.push('<tr>');
+                    tr.push('<td><span class="badge bg-light text-dark border">' + item.categoryId + '</span></td>');
+                    tr.push('<td>' + imgHtml + '</td>');
+                    tr.push('<td class="fw-bold">' + item.categoryName + '</td>');
+                    tr.push('<td class="text-center">' +
+                        '<button type="button" class="btn btn-outline-warning btn-sm me-2" ' +
+                            'onclick="showEditCategoryModal(' + item.categoryId + ', \'' + escapeHtml(item.categoryName) + '\', \'' + (item.icon || '') + '\')">' +
+                            '<i class="fa fa-edit me-1"></i>Sửa</button>' +
+                        '<button type="button" class="btn btn-outline-danger btn-sm btn-delete-cate" data-id="' + item.categoryId + '">' +
+                            '<i class="fa fa-trash me-1"></i>Xóa</button>' +
+                    '</td>');
+                    tr.push('</tr>');
+                }
+                tbody.append(tr.join(''));
+            });
+        }
+
+        // Mở Modal Thêm mới
+        function showCreateNewCategoryModal() {
+            $('#new_categoryname').val('');
+            $('#new_icon').val('');
+            var myModal = new bootstrap.Modal(document.getElementById('createCategoryModal'));
+            myModal.show();
+        }
+
+        // Mở Modal Sửa Category
+        function showEditCategoryModal(categoryId, categoryName, icon) {
+            $('#updateCategoryInfoModalId').text("Category ID: " + categoryId);
+            $('#updateCategoryInfoModalName').text("Category Name: " + categoryName);
+            $('#updateCategoryInfoModalIcon').text("Icon: " + (icon ? icon : 'Chưa có'));
+
+            $('#categoryId_up').val(categoryId);
+            $('#categoryName_up').val(categoryName);
+            $('#icon_up').val('');
+
+            var myModal = new bootstrap.Modal(document.getElementById('updateCategoryInfoModal'));
+            myModal.show();
+        }
+
+        function escapeHtml(text) {
+            return text ? text.replace(/'/g, "\\'").replace(/"/g, "&quot;") : '';
+        }
+    </script>
+</body>
+</html>
